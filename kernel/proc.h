@@ -119,5 +119,4 @@ struct proc {
   int runnable_time;
   int last_sleeping_start;
   int last_running_start;
-  int last_runnable_start;
 };

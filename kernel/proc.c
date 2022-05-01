@@ -185,7 +185,6 @@ freeproc(struct proc *p)
   p->runnable_time = 0;
   p->last_sleeping_start = 0;
   p->last_running_start = 0;
-  p->last_runnable_start = 0;
   p->mean_ticks = 0;
   p->last_ticks = 0;
 
@@ -511,6 +510,7 @@ default_scheduler(void)
           p->runnable_time += ticks-p->last_runnable_time;
           c->proc = p;
           swtch(&c->context, &p->context);
+          p->running_time += ticks-p->last_running_start;
 
           // Process is done running for now.
           // It should have changed its p->state before coming back.
@@ -553,12 +553,12 @@ SJF_scheduler(void){
       continue;
 
     acquire(&p->lock);
-    p->runnable_time += ticks - p->last_runnable_start;
+    p->runnable_time += ticks - p->last_runnable_time;
     p->last_ticks = 0;
    
     while(p->state == RUNNABLE) {
         if(p->pid >2 && ticks-entrence_tick < pause_time){
-          p->last_runnable_start = ticks;
+          p->last_runnable_time = ticks;
           break;  
         }
 
@@ -607,11 +607,11 @@ FCFS_scheduler(void){
     p = min_proc;
    
     acquire(&p->lock);
-    p->runnable_time += ticks - p->last_runnable_start;
+    p->runnable_time += ticks - p->last_runnable_time;
 
     while (p->state == RUNNABLE) {
           if (p->pid >2 && ticks - entrence_tick < pause_time){
-              p->last_runnable_start = ticks;
+              p->last_runnable_time = ticks;
               break;  
           }
           p->state = RUNNING;
@@ -633,8 +633,8 @@ FCFS_scheduler(void){
 int
 pause_system(int time)
 {
-  pause_time = time;
-  entrence_tick = ticks;
+  pause_time = time;  
+  entrence_tick = ticks; 
   return 0;
 }
 
@@ -665,7 +665,7 @@ pause_helper(struct spinlock *lk){
 
 int
 kill_system(void) {
-    struct proc *p;
+  struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
